@@ -1,0 +1,57 @@
+﻿@page "/baza"
+@using BazeZklj.Shared
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavMan
+
+<h3>Baza</h3>
+
+<EditForm Model="Osoba" OnSubmit="Unos">
+	<p><label>Ime: </label><InputText @bind-Value="Osoba.Ime" /></p>
+	<p><label>Prezime: </label><InputText @bind-Value="Osoba.Prezime" /></p>
+	<button class="btn-outline-primary" type="submit">Unesi</button>
+</EditForm>
+
+<ul>
+	@foreach(Osoba o in Osobe)
+	{
+		<li>@o.ID - @o.Ime @o.Prezime <button @onclick="() => Izmena(o)" class="btn-dark">Izmena</button> <button @onclick="() => Brisanje(o)" class="btn-danger">X</button></li>
+	}
+</ul>
+
+@code 
+{
+	public HubConnection Kon;
+	public Osoba Osoba = new Osoba();
+	public List<Osoba> Osobe = new List<Osoba>();
+
+	protected override async Task OnInitializedAsync()
+	{
+		Kon = new HubConnectionBuilder().WithUrl(NavMan.ToAbsoluteUri("db")).Build();
+		Kon.On<List<Osoba>>("KaKlijentu", (lO) =>
+		{
+			Osobe = lO;
+			StateHasChanged();
+		});
+		Kon.StartAsync();
+		Kon.SendAsync("PosaljiPodatke");
+	}
+
+	public void Brisanje(Osoba o)
+	{
+		Kon.SendAsync("Obrisi", o);
+	}
+
+	public void Izmena(Osoba o)
+	{
+		Osoba = o;
+		StateHasChanged();
+	}
+
+	public void Unos()
+	{
+		Kon.SendAsync("KaServeru", Osoba);
+		Osoba = new Osoba();
+
+	}
+
+}
